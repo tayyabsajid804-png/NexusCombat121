@@ -1,0 +1,63 @@
+package com.lungeassist.nexus;
+
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
+import net.minecraft.item.ItemStack;
+import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.Hand;
+import org.lwjgl.glfw.GLFW;
+import java.util.Set;
+
+public class NexusMod implements ClientModInitializer {
+    private boolean mod1 = false, mod2 = false, mod3 = false;
+    private static KeyBinding k1, k2, k3, m4;
+    private final Set<String> SPEARS = Set.of("minecraft:netherite_spear", "minecraft:diamond_spear", "minecraft:copper_spear", "minecraft:iron_spear", "minecraft:stone_spear", "minecraft:wooden_spear");
+    private final Set<String> COMBAT_ITEMS = Set.of("minecraft:mace", "minecraft:sword", "minecraft:axe", "minecraft:wind_charge");
+
+    @Override
+    public void onInitializeClient() {
+        k1 = KeyBindingHelper.registerKeyBinding(new KeyBinding("Lunge Toggle", GLFW.GLFW_KEY_KP_1, "Nexus"));
+        k2 = KeyBindingHelper.registerKeyBinding(new KeyBinding("Mace Toggle", GLFW.GLFW_KEY_KP_2, "Nexus"));
+        k3 = KeyBindingHelper.registerKeyBinding(new KeyBinding("Fall Toggle", GLFW.GLFW_KEY_KP_3, "Nexus"));
+        m4 = KeyBindingHelper.registerKeyBinding(new KeyBinding("Lunge Trigger", InputUtil.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_4, "Nexus"));
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player == null) return;
+            // Toggles
+            if (k1.wasPressed()) { mod1 = !mod1; if(mod1) beep(client); }
+            if (k2.wasPressed()) { mod2 = !mod2; if(mod2) beep(client); }
+            if (k3.wasPressed()) { mod3 = !mod3; if(mod3) beep(client); }
+
+            // Module 1: Lunge
+            if (mod1 && m4.isPressed()) smartSwap(client, SPEARS);
+
+            // Module 2 & 3: Smart Mace Swaps
+            if (client.options.attackKey.isPressed()) {
+                String held = client.player.getMainHandStack().getItem().toString();
+                if (COMBAT_ITEMS.contains(held) || held.contains("spear")) {
+                    if (mod2 || (mod3 && client.player.fallDistance >= 4.0f && client.targetedEntity != null)) {
+                        smartSwap(client, Set.of("minecraft:mace"));
+                    }
+                }
+            }
+        });
+    }
+
+    private void smartSwap(MinecraftClient client, Set<String> targets) {
+        int old = client.player.getInventory().selectedSlot;
+        for (int i = 0; i < 9; i++) {
+            if (targets.contains(client.player.getInventory().getStack(i).getItem().toString())) {
+                client.player.getInventory().selectedSlot = i;
+                client.interactionManager.attackEntity(client.player, client.targetedEntity);
+                client.player.swingHand(Hand.MAIN_HAND);
+                client.player.getInventory().selectedSlot = old;
+                return;
+            }
+        }
+    }
+    private void beep(MinecraftClient c) { c.player.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BIT.value(), 1f, 2f); }
+}
