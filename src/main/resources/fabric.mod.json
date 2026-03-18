@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "nexus_combat",
+  "version": "1.0.0",
+  "name": "Nexus Combat Macros",
+  "entrypoints": { "client": [ "com.lungeassist.nexus.NexusMod" ] },
+  "depends": { "fabricloader": ">=0.16.0", "minecraft": "1.21.11" }
+}
